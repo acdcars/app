@@ -1,0 +1,10 @@
+# ignoruj rzeczy, których nie trzeba wysyłać do buildera
+node_modules
+.next
+.git
+.gitignore
+.vscode
+.idea
+*.log
+Dockerfile
+README*.md
