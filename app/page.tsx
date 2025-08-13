@@ -144,7 +144,13 @@ const actualShipByOrder = dhlRows.reduce<Record<string, number>>((acc, r) => {
 }, {});
 
 /* ---------- Small table ---------- */
-function Table({ columns, rows }: { columns: (string | JSX.Element)[]; rows: React.ReactNode[][] }) {
+function Table({
+  columns,
+  rows,
+}: {
+  columns: Array<string | React.ReactNode>;
+  rows: React.ReactNode[][];
+}) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
