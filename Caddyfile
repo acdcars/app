@@ -1,0 +1,13 @@
+# Replace 'app.example.com' with your real domain.
+app.example.com {
+  encode zstd gzip
+  log
+  tls you@example.com
+  reverse_proxy acdcars_app:3000
+}
+
+# If you don't have a domain yet (LAN only), enable the site below and disable the one above.
+# http://:80 {
+#   log
+#   reverse_proxy acdcars_app:3000
+# }

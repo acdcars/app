@@ -1,29 +1,17 @@
-# ===== Etap 1: build =====
-FROM node:20-alpine AS build
+# Multi-stage Dockerfile for Next.js (standalone output)
+FROM node:20-alpine AS deps
 WORKDIR /app
-ENV NEXT_TELEMETRY_DISABLED=1
-
-# instalacja zależności na podstawie lockfile
 COPY package*.json ./
-RUN npm ci --no-audit --no-fund
-
-# właściwy kod
+RUN npm ci
 COPY . .
-# build Next.js (produkuje .next)
 RUN npm run build
 
-# ===== Etap 2: run (produkcja) =====
-FROM node:20-alpine
+FROM node:20-alpine AS runner
 WORKDIR /app
-ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=3000
-
-# minimalny zestaw plików potrzebnych do startu
-COPY --from=build /app/package*.json ./
-COPY --from=build /app/next.config.* ./
-COPY --from=build /app/public ./public
-COPY --from=build /app/.next ./.next
-COPY --from=build /app/node_modules ./node_modules
-
+ENV NODE_ENV=production
+# Copy the standalone server and static assets
+COPY --from=deps /app/public ./public
+COPY --from=deps /app/.next/standalone ./
+COPY --from=deps /app/.next/static ./.next/static
 EXPOSE 3000
-# "npm start" uruchamia next start (tak jak lokalne "prod")
-CMD ["npm","start"]
+CMD ["node","server.js"]

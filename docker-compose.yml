@@ -1,0 +1,44 @@
+version: "3.8"
+services:
+  app:
+    image: ghcr.io/acdcars/app:latest
+    container_name: acdcars_app
+    restart: unless-stopped
+    environment:
+      - PORT=3000
+    expose:
+      - "3000"
+    networks: [acdcars_net]
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: acdcars_caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+    networks: [acdcars_net]
+
+  watchtower:
+    image: containrrr/watchtower:latest
+    container_name: acdcars_watchtower
+    restart: unless-stopped
+    command: --interval 300 --cleanup --label-enable
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks: [acdcars_net]
+
+volumes:
+  caddy_data:
+  caddy_config:
+
+networks:
+  acdcars_net:
