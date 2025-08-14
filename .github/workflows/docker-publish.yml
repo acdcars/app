@@ -8,12 +8,22 @@ permissions:
   contents: read
   packages: write
 
+env:
+  # => OSTATECZNA NAZWA OBRAZU (użyjemy jej i w push, i w docker-compose)
+  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/app
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Debug context  # <— ten krok pokaże realne wartości w logach
+        run: |
+          echo "owner=${{ github.repository_owner }}"
+          echo "repo=${{ github.repository }}"
+          echo "image=${{ env.IMAGE_NAME }}:latest"
 
       - name: Log in to GHCR
         uses: docker/login-action@v3
@@ -30,6 +40,11 @@ jobs:
         with:
           context: .
           push: true
-          tags: ghcr.io/acdcars/app:latest
+          tags: |
+            ${{ env.IMAGE_NAME }}:latest
+            ${{ env.IMAGE_NAME }}:${{ github.sha }}   # dodatkowy tag po SHA do diagnostyki
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          build-args: |
+            GIT_SHA=${{ github.sha }}
+            BUILD_TIME=${{ github.run_started_at }}
