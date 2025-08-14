@@ -1,39 +1,50 @@
-# --- Build stage (stabilny Debian slim, narzędzia do modułów native) ---
+# syntax=docker/dockerfile:1.6
+
+########################
+# BUILD STAGE
+########################
 FROM node:20-bookworm-slim AS build
 WORKDIR /app
 
-# Przyspieszenia i mniej hałasu
+# Mniej hałasu, deterministyczny build
 ENV NODE_ENV=development \
     npm_config_fund=false \
     npm_config_audit=false
 
-# Narzędzia potrzebne do kompilacji ewentualnych modułów native
+# Narzędzia do modułów natywnych + git + certyfikaty
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3 make g++ git ca-certificates \
-  && rm -rf /var/lib/apt/lists/*
+      python3 make g++ git ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
-# Zależności (z lockiem lub bez)
+# Pokaż wersje (łatwiej diagnozować w logach Actions)
+RUN node -v && npm -v
+
+# Najpierw tylko manifesty zależności (cache layer)
 COPY package.json package-lock.json* ./
+
+# Jeżeli jest lock -> npm ci; jeśli nie (awaryjnie) -> npm install
+# Dodatkowe flagi poprawiają widoczność logów instalacji
 RUN if [ -f package-lock.json ]; then \
-      npm ci --include=dev --no-audit --no-fund; \
+      npm ci --include=dev --no-audit --no-fund --foreground-scripts; \
     else \
-      npm install --include=dev --no-audit --no-fund; \
+      npm install --include=dev --no-audit --no-fund --foreground-scripts; \
     fi
 
-# Reszta źródeł + build
+# Reszta źródeł + build Next
 COPY . .
-# (opcjonalnie wyłącz telemetrię Next)
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 
-# --- Runtime stage (standalone) ---
+########################
+# RUNTIME STAGE
+########################
 FROM node:20-bookworm-slim AS runner
 WORKDIR /app
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
     PORT=3000
 
-# pliki public i standalone serwer Next.js
+# Artefakty standalone z Next 15
 COPY --from=build /app/public ./public
 COPY --from=build /app/.next/standalone ./
 COPY --from=build /app/.next/static ./.next/static
